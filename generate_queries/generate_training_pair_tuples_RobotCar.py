@@ -36,8 +36,8 @@ def main():
 	seq_dirs = load_sequence()
 	seq_pc_dict = {}
 	for i,cur_dir in enumerate(seq_dirs):
-		if i>2:
-			break;
+		#if i>2:
+		#	break;
 		print("\n\n",cur_dir)
 		#load position gps/ins data for cur_dir
 		POS_FILE_PATH = os.path.join(TRAJ_PATH,cur_dir,"gps/ins.csv")

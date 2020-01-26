@@ -14,6 +14,12 @@ def get_queries_dict(filename):
 		print("Queries Loaded.")
 		return queries
 
+def get_pc_img_match_dict(filename):
+	with open(filename, 'rb') as handle:
+		queries = pickle.load(handle)
+		print("point image match Loaded.")
+		return queries	
+
 def load_pc_file(filename):
 	if not os.path.exists(filename):
 		print(filename)

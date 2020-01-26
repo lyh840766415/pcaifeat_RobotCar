@@ -10,7 +10,7 @@ PC_PATH = "/data/lyh/benchmark_datasets/oxford"
 IMG_PATH = "/data/lyh/RobotCar"
 TRAJ_PATH = "/home/lyh/lab/RobotCarDataset-Scraper/Download"
 
-
+'''
 def load_pc_file(filename):
 	#returns Nx3 matrix
 	pc=np.fromfile(filename, dtype=np.float64)
@@ -21,6 +21,7 @@ def load_pc_file(filename):
 
 	pc=np.reshape(pc,(pc.shape[0]//3,3))
 	return pc
+'''
 
 def load_sequence():
 	dirs = os.listdir(IMG_PATH)

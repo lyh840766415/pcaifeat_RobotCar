@@ -6,10 +6,13 @@ import cv2
 import nets.resnet_v1_50 as resnet
 import tensorflow as tf
 
+IMAGE_PATH = '/data/lyh/RobotCar'
 LOG_DIR = "log"
-TRAIN_FILE = 'generate_queries/pcai_training.pickle'
+TRAIN_FILE = 'generate_queries/training_queries_RobotCar.pickle'
 TRAINING_QUERIES = get_queries_dict(TRAIN_FILE)
-MODEL_PATH = '/home/lyh/lab/pcaifeat/log/train_save_backup/model_378000.ckpt'
+PC_IMG_MATCH_FILE = 'generate_queries/pcai_pointcloud_image_match.pickle'
+PC_IMG_MATCH_DICT = get_pc_img_match_dict(PC_IMG_MATCH_FILE)
+MODEL_PATH = '/home/lyh/lab/pcaifeat_RobotCar/model/pcaifeat_model_744000/model_744000.ckpt'
 BATCH_NUM_QUERIES = 2
 EPOCH = 50
 POSITIVES_PER_QUERY = 2
@@ -114,6 +117,34 @@ def init_pcainetwork():
 
 	return images_placeholder,pc_placeholder,epoch_num_placeholder,all_loss,train_op,merged,batch
 
+
+#module to link between pointcloud and image
+#INPUT
+	#PointCloud filename contains sequence name and timestamp
+#OUTPUT
+	#Correspond image filename
+def get_correspond_img(pc_filename):
+	timestamp = pc_filename[-20:-4]
+	seq_name = pc_filename[-65:-46]
+	#print(timestamp)
+	#print(seq_name)
+	#print(PC_IMG_MATCH_DICT[seq_name][timestamp])
+	image_ind = PC_IMG_MATCH_DICT[seq_name][timestamp]
+	image_timestamp = image_ind[random.randint(0,len(image_ind)-1)]
+	image_filename = os.path.join(IMAGE_PATH,seq_name,"stereo/centre","%s.png"%(image_timestamp))
+	#print(image_filename)
+	#if os.path.exists(image_filename):
+	#	print("exist")
+	return image_filename
+
+#module to link between pointclouds and images
+def get_correspond_imgs(pc_filenames):
+	return
+	
+#module to check is_negative
+def is_negative(query,not_negative):
+	return not query in not_negative
+
 #module that used to load data from Hard Disk
 #input
 	#data information in the Hard Disk
@@ -121,16 +152,20 @@ def init_pcainetwork():
 #output
 	#numpy matrix in the memory
 def get_query_tuple(dict_value, num_pos, num_neg, QUERY_DICT):
-	query_pc,success_1_pc=load_pc_file(dict_value["query_pc"]) #Nx3
-	query_img,success_1_img = load_image(dict_value["query_img"])
+	print(dict_value["query"])
+	query_pc,success_1_pc=load_pc_file(dict_value["query"]) #Nx3
+	#link to the corresponding image
+	#TODO 01
+	query_img_filename = get_correspond_img(dict_value["query"])
+	query_img,success_1_img = load_image(query_img_filename)
 
 	random.shuffle(dict_value["positives"])
 	pos_pc_files=[]
 	pos_img_files=[]
 	#load positive pointcloud
 	for i in range(num_pos):
-		pos_pc_files.append(QUERY_DICT[dict_value["positives"][i]]["query_pc"])
-		pos_img_files.append(QUERY_DICT[dict_value["positives"][i]]["query_img"])
+		pos_pc_files.append(QUERY_DICT[dict_value["positives"][i]]["query"])
+		pos_img_files.append(get_correspond_img(QUERY_DICT[dict_value["positives"][i]]["query"]))
 
 	#positives= load_pc_files(dict_value["positives"][0:num_pos])
 	positives_pc,success_2_pc=load_pc_files(pos_pc_files)
@@ -138,16 +173,20 @@ def get_query_tuple(dict_value, num_pos, num_neg, QUERY_DICT):
 
 	neg_pc_files=[]
 	neg_img_files=[]
-	neg_indices=[]
-	random.shuffle(dict_value["negatives"])
 	for i in range(num_neg):
-		neg_pc_files.append(QUERY_DICT[dict_value["negatives"][i]]["query_pc"])
-		neg_img_files.append(QUERY_DICT[dict_value["negatives"][i]]["query_img"])
-		neg_indices.append(dict_value["negatives"][i])
-
+		while True:
+			neg_ind = random.randint(0,len(TRAINING_QUERIES.keys())-1)
+			print("dead loop?")
+			if is_negative(neg_ind,dict_value["not_negative"]):
+				break
+		neg_pc_files.append(QUERY_DICT[neg_ind]["query"])
+		neg_img_files.append(get_correspond_img(QUERY_DICT[neg_ind]["query"]))
+		
+	print("found enough negative")
 	negatives_pc,success_3_pc=load_pc_files(neg_pc_files)
 	negatives_img,success_3_img=load_images(neg_img_files)
-
+	
+	print("image and pointcloud loaded")
 
 	if(success_1_pc and success_1_img and success_2_pc and success_2_img and success_3_pc and success_3_img):
 		query_pc = np.expand_dims(query_pc,axis = 0)
@@ -156,8 +195,8 @@ def get_query_tuple(dict_value, num_pos, num_neg, QUERY_DICT):
 		pc = np.concatenate((query_pc,positives_pc,negatives_pc),axis=0)
 
 		return [pc,img],True
-
-
+		
+	print("False")
 	return [query_pc,query_img,positives_pc,positives_img,negatives_pc,negatives_img],False
 
 #module that pass the batch_data to tensorflow placeholder
@@ -173,6 +212,7 @@ def evalute_and_log():
 def main():
 	images_placeholder,pc_placeholder,epoch_num_placeholder,all_loss,train_op,merged,batch = init_pcainetwork()
 	print(TRAINING_QUERIES[0])
+	print(PC_IMG_MATCH_DICT.keys())
 	error_cnt = 0
 
 	config = tf.ConfigProto()
@@ -182,8 +222,10 @@ def main():
 	#Start training
 	with tf.Session(config=config) as sess:
 		saver.restore(sess, MODEL_PATH)
+		print("model restored")
 		#sess.run(tf.global_variables_initializer())
 		train_writer = tf.summary.FileWriter(os.path.join(LOG_DIR, 'train_save'),sess.graph)
+		print("start training")
 		for ep in range(EPOCH):
 			train_file_idxs = np.arange(0,len(TRAINING_QUERIES.keys()))
 			#print(train_file_idxs)
@@ -199,7 +241,7 @@ def main():
 				q_tuples = []
 				for j in range(BATCH_NUM_QUERIES):
 					#determine whether positive & negative is enough
-					if len(TRAINING_QUERIES[batch_keys[j]]["negatives"]) < NEGATIVES_PER_QUERY:
+					if len(TRAINING_QUERIES.keys())-len(TRAINING_QUERIES[batch_keys[j]]["not_negative"]) < NEGATIVES_PER_QUERY:
 						print("Error Negative is not enough")
 						faulty_tuple = True
 						break

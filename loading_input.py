@@ -27,15 +27,13 @@ def load_pc_file(filename):
 		
 	#returns Nx3 matrix
 	#print(filename)
-	pc = np.fromfile(filename, dtype=np.float32, count=-1).reshape([-1,4])
-	pc_4096 = np.zeros((4096,3), dtype=np.float)
-	for i in range(4096):
-		rand = random.randint(0,pc.shape[0]-1)
-		pc_4096[i,:] = pc[rand,0:3]
-			
-	if(pc_4096.shape[0]!= 4096):
-		print("Error:code fatal error at loading_input.py def load_pc_file")
-		exit()
+	pc=np.fromfile(filename, dtype=np.float64)
+	if(pc.shape[0]!= 4096*3):
+		print("Error in pointcloud shape")
+		return np.array([]),True
+
+	pc=np.reshape(pc,(pc.shape[0]//3,3))
+	return pc,True
 		
 	#print("pointcloud shape ", pc_4096.shape)
 	#np.savetxt('result.txt', pc_4096, fmt="%.5f", delimiter = ',')

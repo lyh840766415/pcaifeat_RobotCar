@@ -14,7 +14,7 @@ PC_IMG_MATCH_FILE = 'generate_queries/pcai_pointcloud_image_match.pickle'
 PC_IMG_MATCH_DICT = get_pc_img_match_dict(PC_IMG_MATCH_FILE)
 MODEL_PATH = '/home/lyh/lab/pcaifeat_RobotCar/model/pcaifeat_model_744000/model_744000.ckpt'
 BATCH_NUM_QUERIES = 2
-EPOCH = 50
+EPOCH = 100
 POSITIVES_PER_QUERY = 2
 NEGATIVES_PER_QUERY = 2
 EMBBED_SIZE = 128
@@ -221,10 +221,10 @@ def main():
 
 	#Start training
 	with tf.Session(config=config) as sess:
-		saver.restore(sess, MODEL_PATH)
-		print("model restored")
-		#sess.run(tf.global_variables_initializer())
-		train_writer = tf.summary.FileWriter(os.path.join(LOG_DIR, 'train_save'),sess.graph)
+		#saver.restore(sess, MODEL_PATH)
+		#print("model restored")
+		sess.run(tf.global_variables_initializer())
+		train_writer = tf.summary.FileWriter(os.path.join(LOG_DIR, 'train_rand_init'),sess.graph)
 		print("start training")
 		for ep in range(EPOCH):
 			train_file_idxs = np.arange(0,len(TRAINING_QUERIES.keys()))
@@ -273,6 +273,10 @@ def main():
 
 				#print(cur_bat_pc.shape)
 				#print(cur_bat_img.shape)
+				#for i in range(cur_bat_pc.shape[0]):
+				#	np.savetxt("varify/pc_%02d.xyz"%(i),cur_bat_pc[i,:,:],fmt="%.3f")
+				#	cv2.imwrite("varify/img_%2d.png"%(i),cur_bat_img[i,:,:,:])
+				#exit()
 
 
 				#start training
@@ -291,7 +295,7 @@ def main():
 				
 				print("batch_num = %d , all_loss = %f"%(batch_num,run_loss))
 				if step%3000 == 0:
-					save_path = saver.save(sess, os.path.join(LOG_DIR,"train_save", "model_%06d.ckpt"%(step)))
+					save_path = saver.save(sess, os.path.join(LOG_DIR,"train_rand_init", "model_%06d.ckpt"%(step)))
 					print("Model saved in file: %s" % save_path)
 
 	print("error_cnt = %d"%(error_cnt))

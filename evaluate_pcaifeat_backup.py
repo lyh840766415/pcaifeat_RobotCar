@@ -16,6 +16,7 @@ BATCH_SIZE = 200
 EMBBED_SIZE = 128
 MODEL_PATH = '/home/lyh/lab/pcaifeat/log/train_save/model_378000.ckpt'
 
+#ready to delete
 def get_learning_rate(epoch):
 	learning_rate = BASE_LEARNING_RATE*((0.9)**(epoch//5))
 	learning_rate = tf.maximum(learning_rate, 0.00001)

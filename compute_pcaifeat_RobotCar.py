@@ -11,11 +11,11 @@ DATABASE_FILE= 'generate_queries/RobotCar_oxford_evaluation_database.pickle'
 QUERY_FILE= 'generate_queries/RobotCar_oxford_evaluation_query.pickle'
 PC_IMG_MATCH_FILE = 'generate_queries/pcai_pointcloud_image_match_test.pickle'
 IMAGE_PATH = '/data/lyh/RobotCar'
-BATCH_SIZE = 70
+BATCH_SIZE = 30
 EMBBED_SIZE = 128
 
-MODEL_PATH = "/home/lyh/lab/pcaifeat_RobotCar/model/pcaifeat_model_861000"
-MODEL_NAME = "model_861000.ckpt"
+MODEL_PATH = "/home/lyh/lab/pcaifeat_RobotCar/model/origin_model_960000"
+MODEL_NAME = "model_00960000.ckpt"
 
 DATABASE_SETS= get_sets_dict(DATABASE_FILE)
 QUERY_SETS= get_sets_dict(QUERY_FILE)
@@ -176,7 +176,6 @@ def get_bn_decay(batch):
 
 def init_imgnetwork():
 	images_placeholder = tf.placeholder(tf.float32,shape=[BATCH_SIZE,144,288,3])
-	EMBBED_SIZE = 128
 	endpoints,body_prefix = resnet.endpoints(images_placeholder,is_training=False)
 	#fix output feature to 128-d
 	img_feat = tf.layers.dense(endpoints['model_output'], EMBBED_SIZE)

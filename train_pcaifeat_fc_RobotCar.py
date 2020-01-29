@@ -12,13 +12,13 @@ TRAIN_FILE = 'generate_queries/training_queries_RobotCar.pickle'
 TRAINING_QUERIES = get_queries_dict(TRAIN_FILE)
 PC_IMG_MATCH_FILE = 'generate_queries/pcai_pointcloud_image_match.pickle'
 PC_IMG_MATCH_DICT = get_pc_img_match_dict(PC_IMG_MATCH_FILE)
-MODEL_PATH = '/home/lyh/lab/pcaifeat_RobotCar/model/pcaifeat_model_867000/model_867000.ckpt'
+MODEL_PATH = '/home/lyh/lab/pcaifeat_RobotCar/model/origin_model_01005000/model_01005000.ckpt'
 BATCH_NUM_QUERIES = 2
 EPOCH = 100
 POSITIVES_PER_QUERY = 2
 NEGATIVES_PER_QUERY = 2
 EMBBED_SIZE = 128
-BASE_LEARNING_RATE = 1e-5
+BASE_LEARNING_RATE = 1e-6
 
 #learning rate halfed every 5 epoch
 def get_learning_rate(epoch):

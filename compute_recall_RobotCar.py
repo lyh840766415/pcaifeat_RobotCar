@@ -9,8 +9,8 @@ def get_queries_dict(filename):
 		print("feature Loaded.")
 		return queries
 
-DATABASE_VECTORS_FILENAME = "database_feat_model_00960000.pickle"
-QUERY_VECTORS_FILENAME = "query_feat_model_00960000.pickle"
+DATABASE_VECTORS_FILENAME = "database_pc_feat_model_00948000.pickle"
+QUERY_VECTORS_FILENAME = "query_pc_feat_model_00948000.pickle"
 #load feature
 DATABASE_VECTORS = get_queries_dict(DATABASE_VECTORS_FILENAME)
 QUERY_VECTORS = get_queries_dict(QUERY_VECTORS_FILENAME)
@@ -19,7 +19,7 @@ QUERY_FILE= 'generate_queries/RobotCar_oxford_evaluation_query.pickle'
 QUERY_SETS= get_sets_dict(QUERY_FILE)
 
 #result output
-output_file = "result_00960000.txt"
+output_file = "result_pc_00948000.txt"
 
 def get_recall(m, n):
 	global DATABASE_VECTORS

@@ -12,7 +12,7 @@ TRAIN_FILE = 'generate_queries/training_queries_RobotCar.pickle'
 TRAINING_QUERIES = get_queries_dict(TRAIN_FILE)
 PC_IMG_MATCH_FILE = 'generate_queries/pcai_pointcloud_image_match.pickle'
 PC_IMG_MATCH_DICT = get_pc_img_match_dict(PC_IMG_MATCH_FILE)
-MODEL_PATH = '/home/lyh/lab/pcaifeat_RobotCar/model/pcaifeat_model_867000/model_867000.ckpt'
+MODEL_PATH = '/home/lyh/lab/pcaifeat_RobotCar/log/train_save_1024/model_00900000.ckpt'
 BATCH_NUM_QUERIES = 2
 EPOCH = 100
 POSITIVES_PER_QUERY = 2
@@ -219,7 +219,8 @@ def main():
 	variables = tf.contrib.framework.get_variables_to_restore()
 	variables_to_restore = [v for v in variables if v.name.split('/')[0]!='fusion_var']
 	saver = tf.train.Saver(variables_to_restore)
-
+	model_saver = tf.train.Saver()
+	
 	#Start training
 	with tf.Session(config=config) as sess:
 		sess.run(tf.global_variables_initializer())
@@ -296,7 +297,7 @@ def main():
 				
 				print("batch_num = %d , all_loss = %f"%(batch_num,run_loss))
 				if step%3000 == 0:
-					save_path = saver.save(sess, os.path.join(LOG_DIR,"train_save_1024", "model_%08d.ckpt"%(step)))
+					save_path = model_saver.save(sess, os.path.join(LOG_DIR,"train_save_1024", "model_%08d.ckpt"%(step)))
 					print("Model saved in file: %s" % save_path)
 
 	print("error_cnt = %d"%(error_cnt))

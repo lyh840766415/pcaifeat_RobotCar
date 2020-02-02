@@ -11,11 +11,12 @@ DATABASE_FILE= 'generate_queries/RobotCar_oxford_evaluation_database.pickle'
 QUERY_FILE= 'generate_queries/RobotCar_oxford_evaluation_query.pickle'
 PC_IMG_MATCH_FILE = 'generate_queries/pcai_pointcloud_image_match_test.pickle'
 IMAGE_PATH = '/data/lyh/RobotCar'
-BATCH_SIZE = 120
-EMBBED_SIZE = 128
+BATCH_SIZE = 100
+EMBBED_SIZE = 512
+PCAI_EMBBED_SIZE = 1024
 
-MODEL_PATH = "/home/lyh/lab/pcaifeat_RobotCar/model/origin_model_01251000"
-MODEL_NAME = "model_01251000.ckpt"
+MODEL_PATH = "/home/lyh/lab/pcaifeat_RobotCar/model/1024_dim_model_01086000"
+MODEL_NAME = "model_01086000.ckpt"
 
 DATABASE_SETS= get_sets_dict(DATABASE_FILE)
 QUERY_SETS= get_sets_dict(QUERY_FILE)
@@ -46,7 +47,9 @@ def get_correspond_img(pc_filename):
 def get_latent_vectors(sess,ops,dict_to_process):
 	print("dict_size = ",len(dict_to_process.keys()))
 	train_file_idxs = np.arange(0,len(dict_to_process.keys()))
-	all_feat = np.empty([0,256],dtype=np.float32)
+	all_feat = np.empty([0,PCAI_EMBBED_SIZE],dtype=np.float32)
+	
+	
 	for i in range(len(train_file_idxs)//BATCH_SIZE):
 		batch_keys = train_file_idxs[i*BATCH_SIZE:(i+1)*BATCH_SIZE]
 		pc_files=[]
@@ -101,13 +104,13 @@ def get_latent_vectors(sess,ops,dict_to_process):
 		print ('feature time ',end_time - begin_time)
 		
 		all_feat = np.concatenate((all_feat,pcai_feat),axis=0)
-
+		
 		print(all_feat.shape)
 		
 	#no edge case
 	if len(train_file_idxs)%BATCH_SIZE == 0:
 		return all_feat
-	
+			
 	#hold edge case
 	remind_index = len(train_file_idxs)%BATCH_SIZE
 	tot_batches = len(train_file_idxs)//BATCH_SIZE
@@ -138,6 +141,7 @@ def get_latent_vectors(sess,ops,dict_to_process):
 	}
 	pcai_feat,_ = sess.run([ops['pcai_feat'],ops['batch']],feed_dict=train_feed_dict)
 	all_feat = np.concatenate((all_feat,pcai_feat),axis=0)
+	
 	print(all_feat.shape)
 	all_feat = all_feat[0:len(dict_to_process.keys()),:]
 	return all_feat
@@ -151,16 +155,16 @@ def output_to_file(output, filename):
 def cal_all_features(ops,sess):
 	database_feat = []
 	query_feat = []
+	
 	for i in range(len(DATABASE_SETS)):
 		cur_feat = get_latent_vectors(sess, ops, DATABASE_SETS[i])
-		database_feat.append(cur_feat)	
+		database_feat.append(cur_feat)
 	for j in range(len(QUERY_SETS)):
 		cur_feat = get_latent_vectors(sess, ops, QUERY_SETS[j])
 		query_feat.append(cur_feat)
 	
 	output_to_file(database_feat,"database_feat_"+MODEL_NAME[0:-5]+".pickle")
 	output_to_file(query_feat,"query_feat_"+MODEL_NAME[0:-5]+".pickle")
-
 		
 		
 def get_bn_decay(batch):
@@ -173,39 +177,44 @@ def get_bn_decay(batch):
 	bn_momentum = tf.train.exponential_decay(BN_INIT_DECAY,batch*BATCH_SIZE,BN_DECAY_DECAY_STEP,BN_DECAY_DECAY_RATE,staircase=True)
 	bn_decay = tf.minimum(BN_DECAY_CLIP, 1 - bn_momentum)
 	return bn_decay
-
+	
+	
 def init_imgnetwork():
 	images_placeholder = tf.placeholder(tf.float32,shape=[BATCH_SIZE,144,288,3])
-	endpoints,body_prefix = resnet.endpoints(images_placeholder,is_training=False)
-	#fix output feature to 128-d
-	img_feat = tf.layers.dense(endpoints['model_output'], EMBBED_SIZE)
+	endpoints,body_prefix = resnet.endpoints(images_placeholder,is_training=True)
 	
-	return images_placeholder,img_feat
-	
+	return images_placeholder,endpoints['model_output']
+
+
 def init_pcnetwork(batch):
 	pc_placeholder = tf.placeholder(tf.float32,shape=[BATCH_SIZE,4096,3])
-	is_training_pl = tf.Variable(False, name = 'is_training')
+	is_training_pl = tf.Variable(True, name = 'is_training')
 	bn_decay = get_bn_decay(batch)
 	endpoints = pointnetvlad(pc_placeholder,is_training_pl,bn_decay)
-	pc_feat = tf.layers.dense(endpoints,EMBBED_SIZE)
-	
-	return pc_placeholder,pc_feat
-	
+
+	return pc_placeholder,endpoints
+
+
 def init_pcainetwork():
 	batch = tf.Variable(0)
 	epoch_num_placeholder = tf.placeholder(tf.float32, shape=())
-	images_placeholder,img_feat = init_imgnetwork()
-	pc_placeholder,pc_feat = init_pcnetwork(batch)
-	img_pc_concat_feat = tf.concat((pc_feat,img_feat),axis=1)
-	pcai_feat = tf.layers.dense(img_pc_concat_feat,256)
+	#with tf.variable_scope("imgnet_var"):
+	images_placeholder,img_feat_ori = init_imgnetwork()
+	#with tf.variable_scope("pcnet_var"):
+	pc_placeholder,pc_feat_ori = init_pcnetwork(batch)
 	
+	with tf.variable_scope("fusion_var"):
+		img_feat = tf.layers.dense(img_feat_ori, EMBBED_SIZE)
+		pc_feat = tf.layers.dense(pc_feat_ori, EMBBED_SIZE)
+		img_pc_concat_feat = tf.concat((pc_feat,img_feat),axis=1)
+		pcai_feat = tf.layers.dense(img_pc_concat_feat,PCAI_EMBBED_SIZE)
+		
 	ops = {
 		'images_placeholder':images_placeholder,
 		'pc_placeholder':pc_placeholder,
 		'epoch_num_placeholder':epoch_num_placeholder,
 		'batch':batch,
 		'pcai_feat':pcai_feat}
-	
 	return ops
 
 

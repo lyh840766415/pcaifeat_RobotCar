@@ -11,12 +11,12 @@ DATABASE_FILE= 'generate_queries/RobotCar_oxford_evaluation_database.pickle'
 QUERY_FILE= 'generate_queries/RobotCar_oxford_evaluation_query.pickle'
 PC_IMG_MATCH_FILE = 'generate_queries/pcai_pointcloud_image_match_test.pickle'
 IMAGE_PATH = '/data/lyh/RobotCar'
-BATCH_SIZE = 30
+BATCH_SIZE = 100
 EMBBED_SIZE = 128
 PCAI_EMBBED_SIZE = 256
 
-MODEL_PATH = "/home/lyh/lab/pcaifeat_RobotCar/model/2_stg_model_00948000"
-MODEL_NAME = "model_00948000.ckpt"
+MODEL_PATH = "/home/lyh/lab/pcaifeat_RobotCar/model/2_stg_model_01350000"
+MODEL_NAME = "model_01350000.ckpt"
 
 DATABASE_SETS= get_sets_dict(DATABASE_FILE)
 QUERY_SETS= get_sets_dict(QUERY_FILE)

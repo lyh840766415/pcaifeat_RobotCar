@@ -11,12 +11,12 @@ DATABASE_FILE= 'generate_queries/RobotCar_oxford_evaluation_database.pickle'
 QUERY_FILE= 'generate_queries/RobotCar_oxford_evaluation_query.pickle'
 PC_IMG_MATCH_FILE = 'generate_queries/pcai_pointcloud_image_match_test.pickle'
 IMAGE_PATH = '/data/lyh/RobotCar'
-BATCH_SIZE = 120
-EMBBED_SIZE = 128
+BATCH_SIZE = 60
+EMBBED_SIZE = 256
 PCAI_EMBBED_SIZE = 256
 
-MODEL_PATH = "/home/lyh/lab/pcaifeat_RobotCar/model/2_stg_model_01788000/"
-MODEL_NAME = "model_01788000.ckpt"
+MODEL_PATH = "/home/lyh/lab/pcaifeat_RobotCar/model/256_dim_model_01410000"
+MODEL_NAME = "model_01410000.ckpt"
 
 DATABASE_SETS= get_sets_dict(DATABASE_FILE)
 QUERY_SETS= get_sets_dict(QUERY_FILE)
@@ -48,8 +48,6 @@ def get_latent_vectors(sess,ops,dict_to_process):
 	print("dict_size = ",len(dict_to_process.keys()))
 	train_file_idxs = np.arange(0,len(dict_to_process.keys()))
 	all_feat = np.empty([0,PCAI_EMBBED_SIZE],dtype=np.float32)
-	img_all_feat = np.empty([0,EMBBED_SIZE],dtype=np.float32)
-	pc_all_feat = np.empty([0,EMBBED_SIZE],dtype=np.float32)
 	
 	
 	for i in range(len(train_file_idxs)//BATCH_SIZE):
@@ -101,20 +99,18 @@ def get_latent_vectors(sess,ops,dict_to_process):
 		}
 		
 		begin_time = time()
-		pcai_feat,img_feat,pc_feat,_ = sess.run([ops['pcai_feat'],ops['img_feat'],ops['pc_feat'],ops['batch']],feed_dict=train_feed_dict)
+		pcai_feat,_ = sess.run([ops['pcai_feat'],ops['batch']],feed_dict=train_feed_dict)
 		end_time = time()
 		print ('feature time ',end_time - begin_time)
 		
 		all_feat = np.concatenate((all_feat,pcai_feat),axis=0)
-		img_all_feat = np.concatenate((img_all_feat,img_feat),axis=0)
-		pc_all_feat = np.concatenate((pc_all_feat,pc_feat),axis=0)
 		
 		print(all_feat.shape)
 		
 	#no edge case
 	if len(train_file_idxs)%BATCH_SIZE == 0:
-		return all_feat,img_all_feat,pc_all_feat
-	
+		return all_feat
+			
 	#hold edge case
 	remind_index = len(train_file_idxs)%BATCH_SIZE
 	tot_batches = len(train_file_idxs)//BATCH_SIZE
@@ -143,16 +139,12 @@ def get_latent_vectors(sess,ops,dict_to_process):
 		ops['pc_placeholder']:pc_data,
 		ops['epoch_num_placeholder']:0,
 	}
-	pcai_feat,img_feat,pc_feat,_ = sess.run([ops['pcai_feat'],ops['img_feat'],ops['pc_feat'],ops['batch']],feed_dict=train_feed_dict)
+	pcai_feat,_ = sess.run([ops['pcai_feat'],ops['batch']],feed_dict=train_feed_dict)
 	all_feat = np.concatenate((all_feat,pcai_feat),axis=0)
-	img_all_feat = np.concatenate((img_all_feat,img_feat),axis=0)
-	pc_all_feat = np.concatenate((pc_all_feat,pc_feat),axis=0)
 	
 	print(all_feat.shape)
 	all_feat = all_feat[0:len(dict_to_process.keys()),:]
-	img_all_feat = img_all_feat[0:len(dict_to_process.keys()),:]
-	pc_all_feat = pc_all_feat[0:len(dict_to_process.keys()),:]
-	return all_feat,img_all_feat,pc_all_feat
+	return all_feat
 	
 def output_to_file(output, filename):
 	with open(filename, 'wb') as handle:
@@ -162,31 +154,17 @@ def output_to_file(output, filename):
 	
 def cal_all_features(ops,sess):
 	database_feat = []
-	database_img_feat = []
-	database_pc_feat = []
 	query_feat = []
-	query_img_feat = []
-	query_pc_feat = []
 	
 	for i in range(len(DATABASE_SETS)):
-		cur_feat,img_feat,pc_feat = get_latent_vectors(sess, ops, DATABASE_SETS[i])
+		cur_feat = get_latent_vectors(sess, ops, DATABASE_SETS[i])
 		database_feat.append(cur_feat)
-		database_img_feat.append(img_feat)
-		database_pc_feat.append(pc_feat)
 	for j in range(len(QUERY_SETS)):
-		cur_feat,img_feat,pc_feat = get_latent_vectors(sess, ops, QUERY_SETS[j])
+		cur_feat = get_latent_vectors(sess, ops, QUERY_SETS[j])
 		query_feat.append(cur_feat)
-		query_img_feat.append(img_feat)
-		query_pc_feat.append(pc_feat)
 	
 	output_to_file(database_feat,"database_feat_"+MODEL_NAME[0:-5]+".pickle")
-	output_to_file(database_img_feat,"database_img_feat_"+MODEL_NAME[0:-5]+".pickle")
-	output_to_file(database_pc_feat,"database_pc_feat_"+MODEL_NAME[0:-5]+".pickle")
 	output_to_file(query_feat,"query_feat_"+MODEL_NAME[0:-5]+".pickle")
-	output_to_file(query_img_feat,"query_img_feat_"+MODEL_NAME[0:-5]+".pickle")
-	output_to_file(query_pc_feat,"query_pc_feat_"+MODEL_NAME[0:-5]+".pickle")
-	
-
 		
 		
 def get_bn_decay(batch):
@@ -229,16 +207,14 @@ def init_pcainetwork():
 		img_feat = tf.layers.dense(img_feat_ori, EMBBED_SIZE)
 		pc_feat = tf.layers.dense(pc_feat_ori, EMBBED_SIZE)
 		img_pc_concat_feat = tf.concat((pc_feat,img_feat),axis=1)
-		pcai_feat = tf.layers.dense(img_pc_concat_feat,256)
+		pcai_feat = tf.layers.dense(img_pc_concat_feat,PCAI_EMBBED_SIZE)
 		
 	ops = {
 		'images_placeholder':images_placeholder,
 		'pc_placeholder':pc_placeholder,
 		'epoch_num_placeholder':epoch_num_placeholder,
 		'batch':batch,
-		'pcai_feat':pcai_feat,
-		'img_feat':img_feat,
-		'pc_feat':pc_feat}
+		'pcai_feat':pcai_feat}
 	return ops
 
 

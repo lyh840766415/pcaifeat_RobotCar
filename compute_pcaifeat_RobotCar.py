@@ -14,8 +14,8 @@ IMAGE_PATH = '/data/lyh/RobotCar'
 BATCH_SIZE = 120
 EMBBED_SIZE = 128
 
-MODEL_PATH = "/home/lyh/lab/pcaifeat_RobotCar/model/origin_model_01251000"
-MODEL_NAME = "model_01251000.ckpt"
+MODEL_PATH = "/home/lyh/lab/pcaifeat_RobotCar/model/origin_model_01515000"
+MODEL_NAME = "model_01515000.ckpt"
 
 DATABASE_SETS= get_sets_dict(DATABASE_FILE)
 QUERY_SETS= get_sets_dict(QUERY_FILE)
